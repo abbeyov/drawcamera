@@ -1,0 +1,134 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>trackingc.js - draw something</title>
+  <link rel="stylesheet" href="assets/demo.css">
+
+  <script src="../build/tracking.js"></script>
+  <script src="assets/splines.min.js"></script>
+ <script src="../build/tracking-min.js"></script>
+  <script src="../build/data/face-min.js"></script>
+   <script src="../node_modules/dat.gui/build/dat.gui.min.js"></script>
+ 
+
+  <style>
+    #canvas,
+    #video {
+      height: 300px;
+      position: absolute;
+      width: 400px;
+      padding-top: 66px;
+    }
+    .draw-frame {
+   
+      width: 0px;
+      height: 0px;
+      border: 0px solid #ccc;
+      top: 50%;
+      left: 50%;
+      position: absolute;
+      margin: -207px 0 0 -200px;
+    }
+
+    canvas, video {
+      -moz-transform: scale(-1, 1);
+      -o-transform: scale(-1, 1);
+      -webkit-transform: scale(-1, 1);
+      filter: FlipH;
+      transform: scale(-1, 1);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="demo-title">
+   
+  </div>
+
+  <div class="demo-frame">
+    <div class="demo-container">
+      <div class="draw-frame">
+        <video id="video" width="400" height="300" preload autoplay loop muted></video>
+        <canvas id="canvas" width="400" height="300"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      var video = document.getElementById('video');
+      var canvas = document.getElementById('canvas');
+      var context = canvas.getContext('2d');
+
+      var drawSegments = [[]];
+      var segment = 0;
+
+      var trackerc = new trackingc.Colortrackerc(['magenta', 'cyan']);
+ var tracker = new tracking.ObjectTracker('face');
+      tracker.setInitialScale(4);
+      tracker.setStepSize(2);
+      tracker.setEdgesDensity(0.1);
+      trackingc.track('#video', trackerc, { camera: true });
+ tracking.track('#video', tracker, { camera: true });
+
+      tracker.on('track', function(event) {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        event.data.forEach(function(rect) {
+          context.strokeStyle = '#a64ceb';
+          context.fillRect(rect.x, rect.y, rect.width, rect.height);
+          context.font = '11px Helvetica';
+          context.fillStyle = "#000000";
+          
+        });
+      });
+
+      trackerc.on('track', function(event) {
+        if (event.data.length === 0 && drawSegments[segment].length > 0) {
+          segment++;
+
+          if (!drawSegments[segment]) {
+            drawSegments[segment] = [];
+          }
+        }
+
+        event.data.forEach(function(rect) {
+          if (rect.color === 'cyan') {
+            draw(rect);
+          }
+          else if (rect.color === 'magenta') {
+            erase(rect);
+          }
+        });
+      });
+
+      function draw(rect) {
+        drawSegments[segment].push(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      }
+
+      function erase(rect) {
+        context.clearRect(rect.x, rect.y, rect.width, rect.height);
+      }
+
+      function isInsideRect(x, y, rect) {
+        return rect.x <= x && x <= rect.x + rect.width &&
+            rect.y <= y && y <= rect.y + rect.height;
+      }
+
+      (function loop() {
+          for (var i = 0, len = drawSegments.length; i < len; i++) {
+              drawSpline(context, drawSegments[i], 0.5, false);
+          }
+
+          drawSegments = [drawSegments[drawSegments.length - 1]];
+          segment = 0;
+
+          requestAnimationFrame(loop);
+      }());
+    };
+
+  </script>
+
+</body>
+</html>
